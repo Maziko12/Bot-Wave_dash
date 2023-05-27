@@ -58,19 +58,43 @@ class MyBot(BaseAgent):
 
         # Draw some things to help understand what the bot is thinking
         self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
+        self.renderer.draw_string_3d(car_location, 1, 1, f'Velocidade: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
 
         if 750 < car_velocity.length() < 800:
             # We'll do a front flip if the car is moving at a certain speed.
             return self.begin_front_flip(packet)
 
+        if self.car_location.z == 0:
+            print('Deu certo!\n')
+            return self.begin_wave_dash(packet)
+
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
         controls.throttle = 1.0
         # You can set more controls if you want, like controls.boost.
+        controls.boost = True
 
         return controls
+
+    def begin_wave_dash(self, packet):
+        # Chat rápido.
+        self.send_quick_chat(team_only=True, quick_chat=QuickChatSelection.Apologies_Whoops)
+        
+        # Sequência de comandos para fazer o wave dash.
+        self.active_sequence = Sequence([
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=False, pitch=-0.5)),
+            ControlStep(duration=1, controls=SimpleControllerState(jump=False, boost=True)),
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False, boost=False)),
+            ControlStep(duration=0.3, controls=SimpleControllerState(jump=False, pitch=0.8)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, pitch=-1)),
+            ControlStep(duration=0.8, controls=SimpleControllerState(jump=False, handbrake=True))
+        ])
+
+        # Isso retorna a sequência de comandos do wave dash, desde o primeiro pulo, até o dash.
+        return self.active_sequence.tick(packet)
 
 
     def begin_front_flip(self, packet):
